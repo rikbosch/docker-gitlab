@@ -7,7 +7,8 @@ ENV GITLAB_VERSION=7.13.0 \
     GITLAB_HOME="/home/git" \
     GITLAB_LOG_DIR="/var/log/gitlab" \
     SETUP_DIR="/var/cache/gitlab" \
-    RAILS_ENV=production
+    RAILS_ENV=production \
+    SUBGIT_URL="http://old.subgit.com/interim/3.0.0-RC2/subgit_3.0.0_all.deb"
 
 ENV GITLAB_INSTALL_DIR="${GITLAB_HOME}/gitlab" \
     GITLAB_SHELL_INSTALL_DIR="${GITLAB_HOME}/gitlab-shell" \
@@ -28,11 +29,18 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E1DD270288B4E60
       libmysqlclient18 libpq5 zlib1g libyaml-0-2 libssl1.0.0 \
       libgdbm3 libreadline6 libncurses5 libffi6 \
       libxml2 libxslt1.1 libcurl3 libicu52 \
+      git subversion openjdk-7-jre-headless \
  && update-locale LANG=C.UTF-8 LC_MESSAGES=POSIX \
  && locale-gen en_US.UTF-8 \
  && dpkg-reconfigure locales \
  && gem install --no-document bundler \
  && rm -rf /var/lib/apt/lists/*
+
+# Download from official website and install
+RUN ( wget -O subgit.deb -q ${SUBGIT_URL} && \
+      dpkg -i subgit.deb )
+# Fix SNI error with Java 7
+RUN ( sed -i '/^EXTRA_JVM_ARGUMENTS.*/a EXTRA_JVM_ARGUMENTS="$EXTRA_JVM_ARGUMENTS -Djsse.enableSNIExtension=false"' /usr/bin/subgit )
 
 COPY assets/setup/ ${SETUP_DIR}/
 RUN bash ${SETUP_DIR}/install.sh
